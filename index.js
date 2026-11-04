@@ -13,6 +13,7 @@ const {
   Events,
   GatewayIntentBits,
   MessageFlags,
+  OverwriteType,
   PermissionFlagsBits,
   StringSelectMenuBuilder
 } = require('discord.js');
@@ -161,10 +162,12 @@ async function openTicket(interaction) {
       permissionOverwrites: [
         {
           id: everyoneId,
+          type: OverwriteType.Role,
           deny: [PermissionFlagsBits.ViewChannel]
         },
         {
           id: userId,
+          type: OverwriteType.Member,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -175,6 +178,7 @@ async function openTicket(interaction) {
         },
         ...(shopStaffId === userId ? [] : [{
           id: shopStaffId,
+          type: OverwriteType.Member,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -185,6 +189,7 @@ async function openTicket(interaction) {
         }]),
         {
           id: client.user.id,
+          type: OverwriteType.Member,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -219,7 +224,7 @@ async function openTicket(interaction) {
     await interaction.editReply('✅ Twój prywatny ticket został utworzony: <#' + channel.id + '>');
     console.log('Ticket created in ZAKUPY: ' + channel.id);
   } catch (error) {
-    console.error('Could not open shop ticket:', error.message);
+    console.error('Could not open shop ticket:', error);
     await interaction.editReply('Nie udało się utworzyć ticketu. Sprawdź uprawnienia bota w kategorii ZAKUPY.');
   } finally {
     openingTickets.delete(userId);
