@@ -59,7 +59,7 @@ function panelMessage() {
       '**Jak to działa?**\n' +
       '① Wybierz opcję zakupową.\n' +
       '② Opisz, co chcesz kupić.\n' +
-      '③ Poczekaj na odpowiedź obsługi sklepu.\n\n' +
+      '③ Poczekaj na odpowiedź zarządu.\n\n' +
       '🔒 **Rozmowa będzie widoczna tylko dla Ciebie i uprawnionej obsługi.**'
     )
     .setThumbnail(client.user.displayAvatarURL())
