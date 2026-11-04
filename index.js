@@ -20,7 +20,7 @@ const token = process.env.DISCORD_TOKEN;
 const guildId = process.env.GUILD_ID || '1560762219946451035';
 const panelChannelId = '1560763451129860147';
 const botName = 'SKLEP | DreamLifeRP';
-const panelFooter = 'DreamLifeRP © 2026 • Panel zakupów';
+const panelFooter = 'DreamLifeRP © 2026';
 const ticketPrefix = 'dreamlife-shop-ticket:';
 const openingTickets = new Set();
 
@@ -55,12 +55,11 @@ function panelMessage() {
     .setTitle('🛒  Centrum zakupów • DreamLifeRP')
     .setDescription(
       '**Chcesz dokonać zakupu na serwerze?**\n\n' +
-      'Wybierz opcję **„Dokonaj zakupu”** z menu poniżej, aby otworzyć swój prywatny ticket.\n\n' +
+      'Wybierz opcję **„Dokonaj zakupu”**.\n\n' +
       '**Jak to działa?**\n' +
       '① Wybierz opcję zakupową.\n' +
       '② Opisz, co chcesz kupić.\n' +
-      '③ Poczekaj na odpowiedź zarządu.\n\n' +
-      '🔒 **Rozmowa będzie widoczna tylko dla Ciebie i uprawnionej obsługi.**'
+      '③ Poczekaj na odpowiedź zarządu.'
     )
     .setThumbnail(client.user.displayAvatarURL())
     .setFooter({ text: panelFooter });
@@ -99,7 +98,7 @@ async function ensurePanel() {
   const messages = await panel.messages.fetch({ limit: 100 });
   const previous = messages.find(message =>
     message.author.id === client.user.id &&
-    message.embeds.some(embed => embed.footer && embed.footer.text === panelFooter)
+    message.embeds.some(embed => embed.footer && [panelFooter, 'DreamLifeRP © 2026 • Panel zakupów'].includes(embed.footer.text))
   );
 
   if (previous) {
