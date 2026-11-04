@@ -96,18 +96,22 @@ async function ensurePanel() {
   }
 
   const messages = await panel.messages.fetch({ limit: 100 });
-  const previous = messages.find(message =>
+  const previousPanels = messages.filter(message =>
     message.author.id === client.user.id &&
-    message.embeds.some(embed => embed.footer && [panelFooter, 'DreamLifeRP © 2026 • Panel zakupów'].includes(embed.footer.text))
+    message.components.some(row =>
+      row.components.some(component => component.customId === 'dreamlife-shop:buy')
+    )
   );
 
-  if (previous) {
-    await previous.edit(panelMessage());
-    console.log('Shop panel updated in allowed channel: ' + panel.id);
-  } else {
-    const posted = await panel.send(panelMessage());
-    console.log('Shop panel posted: ' + posted.id + ' in allowed category ' + category.id);
+  const posted = await panel.send(panelMessage());
+  for (const previous of previousPanels.values()) {
+    try {
+      await previous.delete();
+    } catch (error) {
+      console.error('Could not delete old shop panel ' + previous.id + ':', error.message);
+    }
   }
+  console.log('Shop panel resent without edits: ' + posted.id + ' in allowed category ' + category.id);
 }
 
 function isPurchaseTicket(channel, categoryId) {
