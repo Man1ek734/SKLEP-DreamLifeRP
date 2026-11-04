@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { nextTicketNumber } = require('./ticket-counter');
 const {
   ActionRowBuilder,
   ButtonBuilder,
@@ -22,6 +23,7 @@ const panelChannelId = '1560763451129860147';
 const botName = 'SKLEP | DreamLifeRP';
 const panelFooter = 'DreamLifeRP © 2026';
 const ticketPrefix = 'dreamlife-shop-ticket:';
+const shopStaffId = '500912461504053259';
 const openingTickets = new Set();
 
 if (!token) {
@@ -121,15 +123,6 @@ function isPurchaseTicket(channel, categoryId) {
     /^dreamlife-shop-ticket:\d{17,22}$/.test(channel.topic);
 }
 
-function ticketName(username, id) {
-  const safe = username.toLowerCase().normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 42) || 'klient';
-  return 'zakup-' + safe + '-' + id.slice(-4);
-}
-
 async function openTicket(interaction) {
   if (interaction.channelId !== panelChannelId || interaction.values[0] !== 'purchase') {
     await interaction.reply({ content: 'Ta opcja nie jest dostępna.', flags: MessageFlags.Ephemeral });
@@ -159,8 +152,9 @@ async function openTicket(interaction) {
     }
 
     const everyoneId = guild.roles.everyone.id;
+    const ticketNumber = nextTicketNumber();
     const channel = await guild.channels.create({
-      name: ticketName(interaction.user.username, userId),
+      name: 'ticket-' + ticketNumber,
       type: ChannelType.GuildText,
       parent: category.id,
       topic,
@@ -179,6 +173,16 @@ async function openTicket(interaction) {
             PermissionFlagsBits.AttachFiles
           ]
         },
+        ...(shopStaffId === userId ? [] : [{
+          id: shopStaffId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.AttachFiles
+          ]
+        }]),
         {
           id: client.user.id,
           allow: [
@@ -195,12 +199,8 @@ async function openTicket(interaction) {
 
     const welcome = new EmbedBuilder()
       .setColor(0xF3BE36)
-      .setTitle('🛍️  Twoje zamówienie • DreamLifeRP')
-      .setDescription(
-        'Witaj <@' + userId + '>!\n\n' +
-        '**Napisz, co chcesz kupić**, a obsługa sklepu zajmie się Twoim zgłoszeniem.\n\n' +
-        'Jeśli chcesz zakończyć rozmowę, użyj przycisku poniżej.'
-      )
+      .setTitle('🛍️  Ticket zakupowy #' + ticketNumber)
+      .setDescription('Witaj <@' + userId + '>!')
       .setFooter({ text: 'DreamLifeRP © 2026 • Ticket zakupowy' });
 
     const closeButton = new ButtonBuilder()
@@ -210,9 +210,10 @@ async function openTicket(interaction) {
       .setStyle(ButtonStyle.Secondary);
 
     await channel.send({
+      content: '<@' + shopStaffId + '>',
       embeds: [welcome],
       components: [new ActionRowBuilder().addComponents(closeButton)],
-      allowedMentions: { users: [userId] }
+      allowedMentions: { users: [shopStaffId] }
     });
 
     await interaction.editReply('✅ Twój prywatny ticket został utworzony: <#' + channel.id + '>');
