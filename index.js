@@ -14,8 +14,7 @@ const {
   GatewayIntentBits,
   MessageFlags,
   OverwriteType,
-  PermissionFlagsBits,
-  StringSelectMenuBuilder
+  PermissionFlagsBits
 } = require('discord.js');
 
 const token = process.env.DISCORD_TOKEN;
@@ -58,28 +57,23 @@ function panelMessage() {
     .setTitle('🛒  Centrum zakupów • DreamLifeRP')
     .setDescription(
       '**Chcesz dokonać zakupu na serwerze?**\n\n' +
-      'Wybierz opcję **„Dokonaj zakupu”**.\n\n' +
+      'Kliknij przycisk **„Stwórz Ticketa”**.\n\n' +
       '**Jak to działa?**\n' +
-      '① Wybierz opcję zakupową.\n' +
+      '① Kliknij przycisk poniżej.\n' +
       '② Opisz, co chcesz kupić.\n' +
       '③ Poczekaj na odpowiedź zarządu.'
     )
     .setThumbnail(client.user.displayAvatarURL())
     .setFooter({ text: panelFooter });
 
-  const select = new StringSelectMenuBuilder()
+  const button = new ButtonBuilder()
     .setCustomId('dreamlife-shop:buy')
-    .setPlaceholder('🛍️ Wybierz opcję zakupową')
-    .addOptions({
-      label: 'Dokonaj zakupu',
-      description: 'Otwórz prywatny ticket zakupowy',
-      value: 'purchase',
-      emoji: '🛒'
-    });
+    .setLabel('Stwórz Ticketa')
+    .setStyle(ButtonStyle.Secondary);
 
   return {
     embeds: [embed],
-    components: [new ActionRowBuilder().addComponents(select)],
+    components: [new ActionRowBuilder().addComponents(button)],
     allowedMentions: { parse: [] }
   };
 }
@@ -125,7 +119,7 @@ function isPurchaseTicket(channel, categoryId) {
 }
 
 async function openTicket(interaction) {
-  if (interaction.channelId !== panelChannelId || interaction.values[0] !== 'purchase') {
+  if (interaction.channelId !== panelChannelId || interaction.customId !== 'dreamlife-shop:buy' || !interaction.isButton()) {
     await interaction.reply({ content: 'Ta opcja nie jest dostępna.', flags: MessageFlags.Ephemeral });
     return;
   }
@@ -317,7 +311,7 @@ client.once(Events.ClientReady, async () => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.guildId !== guildId) return;
 
-  const isBuy = interaction.isStringSelectMenu() &&
+  const isBuy = interaction.isButton() &&
     interaction.customId === 'dreamlife-shop:buy';
   const isClose = interaction.isButton() &&
     ['dreamlife-shop:close', 'dreamlife-shop:confirm', 'dreamlife-shop:cancel']
