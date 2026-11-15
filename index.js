@@ -335,6 +335,125 @@ async function correctLandCruiserBeastListing() {
     ' as message ' + message.id);
 }
 
+
+/** One-time, narrowly scoped shop listing correction requested 2026-11-15. */
+async function relocateAndRenameRequestedVehicles() {
+  const MOVE_SOURCE_ID = '1571607246796759204';
+  const MOVE_TARGET_CHANNEL_ID = '1571602888923291838';
+  const RENAME_MESSAGE_ID = '1571607262483714171';
+  const RENAME_CONTENT = '• **Rolls Royce Wraith Prime Edition | Itzahmed_2002**';
+  const label = '[Requested shop correction 2026-11-15]';
+  const guild = await client.guilds.fetch(guildId);
+  const channels = await guild.channels.fetch();
+  const destination = channels.get(MOVE_TARGET_CHANNEL_ID) ||
+    await guild.channels.fetch(MOVE_TARGET_CHANNEL_ID);
+
+  if (!destination || destination.guildId !== guildId ||
+      destination.type !== ChannelType.GuildText) {
+    throw new Error(label + ' Destination is not a text channel within the expected guild.');
+  }
+
+  const candidates = [...channels.values()].filter(channel =>
+    channel && channel.guildId === guildId &&
+    channel.type === ChannelType.GuildText &&
+    /sedany|pojazdy-sportowe|coupe|off-road|musclecar|limuzyny|motocykle/i.test(channel.name)
+  );
+  if (!candidates.some(ch => ch.id === destination.id)) candidates.push(destination);
+
+  async function findById(id) {
+    for (const ch of candidates) {
+      try {
+        const msg = await ch.messages.fetch(id);
+        return {channel: ch, message: msg};
+      } catch (error) {
+        if (error.code !== 10008 && error.code !== 50001 && error.code !== 50013) {
+          console.warn(label + ' Lookup ' + id + ' in #' + ch.name + ' failed: ' + error.message);
+        }
+      }
+    }
+    return null;
+  }
+
+  // Preserve author, text and photo: send new copy before deleting the old post.
+  try {
+    const source = await findById(MOVE_SOURCE_ID);
+    if (!source) {
+      console.warn(label + ' Move source ' + MOVE_SOURCE_ID + ' not found; cannot move.');
+    } else if (source.message.author.id !== client.user.id) {
+      console.warn(label + ' Move refused: source message is not owned by this bot.');
+    } else if (source.channel.id === MOVE_TARGET_CHANNEL_ID) {
+      console.log(label + ' Source is already in the destination channel.');
+    } else {
+      const destRecent = await destination.messages.fetch({ limit: 100 });
+      let duplicate = destRecent.find(msg =>
+        msg.author.id === client.user.id &&
+        msg.content === source.message.content &&
+        msg.attachments.size === source.message.attachments.size &&
+        (msg.attachments.size === 0 || [...msg.attachments.values()].every((a,i) =>
+          a.name === [...source.message.attachments.values()][i]?.name))
+      );
+      if (!duplicate) {
+        const files = [];
+        for (const [i, attachment] of [...source.message.attachments.values()].entries()) {
+          if (attachment.size > 8 * 1024 * 1024) {
+            throw new Error('Attachment exceeds 8 MB; old post left untouched.');
+          }
+          const response = await fetch(attachment.url, {
+            signal: AbortSignal.timeout(20000)
+          });
+          if (!response.ok) throw new Error('Could not retrieve photo: HTTP ' + response.status);
+          const bytes = Buffer.from(await response.arrayBuffer());
+          if (bytes.length !== attachment.size) {
+            throw new Error('Photo download size mismatch; leaving source untouched.');
+          }
+          files.push({
+            attachment: bytes,
+            name: attachment.name || 'auto-' + i + '.png'
+          });
+        }
+        const embeds = source.message.embeds
+          .filter(e => e.type === 'rich')
+          .map(e => e.toJSON());
+        duplicate = await destination.send({
+          content: source.message.content || (embeds.length || files.length ? undefined : '•'),
+          files,
+          embeds,
+          allowedMentions: {parse: []}
+        });
+        console.log(label + ' Copied source message ' + MOVE_SOURCE_ID +
+          ' to channel ' + MOVE_TARGET_CHANNEL_ID + ' as ' + duplicate.id);
+      } else {
+        console.log(label + ' Equivalent copy already in destination: ' + duplicate.id);
+      }
+      await source.message.delete();
+      console.log(label + ' Deleted original ' + MOVE_SOURCE_ID + ' in #' + source.channel.name);
+    }
+  } catch (error) {
+    console.error(label + ' Move failed; source left intact whenever possible:', error);
+  }
+
+  // Change text only: Discord preserves the message's original image attachment.
+  try {
+    const located = await findById(RENAME_MESSAGE_ID);
+    if (!located) {
+      console.warn(label + ' Rename message ' + RENAME_MESSAGE_ID + ' not found.');
+    } else if (located.message.author.id !== client.user.id) {
+      console.warn(label + ' Rename refused: message is not owned by this bot.');
+    } else if (located.message.content === RENAME_CONTENT) {
+      console.log(label + ' Rename already correct at ' + RENAME_MESSAGE_ID);
+    } else {
+      const changed = await located.message.edit({
+        content: RENAME_CONTENT,
+        allowedMentions: {parse: []}
+      });
+      console.log(label + ' Edited ' + changed.id + ' in channel ' +
+        located.channel.id + ' -> ' + RENAME_CONTENT);
+    }
+  } catch (error) {
+    console.error(label + ' Rename failed:', error);
+  }
+}
+
 client.once(Events.ClientReady, async () => {
   console.log('Discord bot connected: ' + client.user.id);
 
@@ -372,6 +491,12 @@ client.once(Events.ClientReady, async () => {
     await correctLandCruiserBeastListing();
   } catch (error) {
     console.error('Land Cruiser correction failed:', error);
+  }
+
+  try {
+    await relocateAndRenameRequestedVehicles();
+  } catch (error) {
+    console.error('Requested vehicle corrections failed:', error);
   }
 });
 
