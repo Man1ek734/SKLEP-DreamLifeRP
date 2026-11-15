@@ -3,6 +3,7 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 const { nextTicketNumber } = require('./ticket-counter');
+const { registerVehicleImport, importVehicles } = require('./vehicle-import');
 const {
   ActionRowBuilder,
   ButtonBuilder,
@@ -306,10 +307,21 @@ client.once(Events.ClientReady, async () => {
   } catch (error) {
     console.error('Shop panel setup failed:', error.message);
   }
+
+  try {
+    await registerVehicleImport(client, guildId);
+  } catch (error) {
+    console.error('Vehicle import command registration failed:', error);
+  }
 });
 
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.guildId !== guildId) return;
+
+  if (interaction.isChatInputCommand() && interaction.commandName === 'import-pojazdy') {
+    await importVehicles(interaction, guildId);
+    return;
+  }
 
   const isBuy = interaction.isButton() &&
     interaction.customId === 'dreamlife-shop:buy';
