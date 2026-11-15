@@ -281,6 +281,60 @@ async function handleClose(interaction, categoryId) {
   }
 }
 
+// One-time correction of a mislabeled vehicle post. Idempotent across restarts.
+async function correctLandCruiserBeastListing() {
+  const wrongMessageId = '1571607258314440880';
+  const destinationId = '1560763085994598553';
+  const correctName = 'Land Cruiser Beast Editon | Itzahmad_2002';
+  const guild = await client.guilds.fetch(guildId);
+  const channels = await guild.channels.fetch();
+
+  const catalogChannels = [...channels.values()]
+    .filter(channel => channel && channel.type === ChannelType.GuildText &&
+      /sedany|pojazdy-sportowe|coupe|off-road|musclecar|limuzyny|motocykle/i.test(channel.name))
+    .sort((a, b) => Number(/sedany/i.test(b.name)) - Number(/sedany/i.test(a.name)));
+
+  let removed = false;
+  for (const channel of catalogChannels) {
+    try {
+      const message = await channel.messages.fetch(wrongMessageId);
+      if (message.author.id !== client.user.id) {
+        console.warn('Land Cruiser correction: matched message belongs to another author, leaving it intact.');
+        break;
+      }
+      await message.delete();
+      removed = true;
+      console.log('Land Cruiser correction: removed erroneous post ' + wrongMessageId + ' from #' + channel.name);
+      break;
+    } catch (error) {
+      if (error.code !== 10008) {
+        console.warn('Land Cruiser correction: lookup/delete failed in #' + channel.name + ': ' + error.message);
+      }
+    }
+  }
+  if (!removed) console.warn('Land Cruiser correction: erroneous message not found or could not be removed.');
+
+  const destination = channels.get(destinationId) || await guild.channels.fetch(destinationId);
+  if (!destination || destination.guildId !== guildId || destination.type !== ChannelType.GuildText) {
+    throw new Error('Land Cruiser correction: target channel is not a text channel in the expected guild.');
+  }
+  const recent = await destination.messages.fetch({limit: 100});
+  const duplicate = recent.find(msg => msg.author.id === client.user.id &&
+    msg.content.includes(correctName));
+  if (duplicate) {
+    console.log('Land Cruiser correction: correct listing already exists: ' + duplicate.id);
+    return;
+  }
+  const photoPath = path.join(__dirname, 'assets', 'land-cruiser-beast.jpg');
+  const message = await destination.send({
+    content: '• **' + correctName + '**',
+    files: [{ attachment: fs.readFileSync(photoPath), name: 'Land_Cruiser_Beast_Editon.jpg' }],
+    allowedMentions: { parse: [] }
+  });
+  console.log('Land Cruiser correction: posted ' + correctName + ' in channel ' + destinationId +
+    ' as message ' + message.id);
+}
+
 client.once(Events.ClientReady, async () => {
   console.log('Discord bot connected: ' + client.user.id);
 
@@ -312,6 +366,12 @@ client.once(Events.ClientReady, async () => {
     await registerVehicleImport(client, guildId);
   } catch (error) {
     console.error('Vehicle import command registration failed:', error);
+  }
+
+  try {
+    await correctLandCruiserBeastListing();
+  } catch (error) {
+    console.error('Land Cruiser correction failed:', error);
   }
 });
 
