@@ -454,6 +454,42 @@ async function relocateAndRenameRequestedVehicles() {
   }
 }
 
+
+async function correctRangeRoverOnyxListing() {
+  const messageId = '1571607243726524507';
+  const newContent = '• **Range Rover Onyx Edition | Nejc1**';
+  const guild = await client.guilds.fetch(guildId);
+  const channels = await guild.channels.fetch();
+  const candidates = [...channels.values()].filter(channel =>
+    channel && channel.type === ChannelType.GuildText &&
+    channel.guildId === guildId &&
+    /sedany|pojazdy-sportowe|coupe|off-road|musclecar|limuzyny|motocykle/i.test(channel.name)
+  );
+  for (const channel of candidates) {
+    let message;
+    try {
+      message = await channel.messages.fetch(messageId);
+    } catch (error) {
+      if (error.code !== 10008 && error.code !== 50001 && error.code !== 50013) {
+        console.warn('Range Rover rename lookup in ' + channel.id + ': ' + error.message);
+      }
+      continue;
+    }
+    if (message.author.id !== client.user.id) {
+      console.warn('Range Rover rename refused, message is not bot-owned: ' + messageId);
+      return;
+    }
+    if (message.content === newContent) {
+      console.log('Range Rover rename already correct: ' + messageId + ' in channel ' + channel.id);
+      return;
+    }
+    await message.edit({ content: newContent, allowedMentions: { parse: [] } });
+    console.log('Range Rover rename completed: ' + messageId + ' in channel ' + channel.id + ' -> ' + newContent);
+    return;
+  }
+  console.warn('Range Rover rename: message not found in catalog channels: ' + messageId);
+}
+
 client.once(Events.ClientReady, async () => {
   console.log('Discord bot connected: ' + client.user.id);
 
@@ -497,6 +533,12 @@ client.once(Events.ClientReady, async () => {
     await relocateAndRenameRequestedVehicles();
   } catch (error) {
     console.error('Requested vehicle corrections failed:', error);
+  }
+
+  try {
+    await correctRangeRoverOnyxListing();
+  } catch (error) {
+    console.error('Range Rover rename failed:', error);
   }
 });
 
