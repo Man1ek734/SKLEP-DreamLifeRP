@@ -490,6 +490,37 @@ async function correctRangeRoverOnyxListing() {
   console.warn('Range Rover rename: message not found in catalog channels: ' + messageId);
 }
 
+// Requested correction: change only the text of an existing motorcycle post.
+async function renameKawasakiListing() {
+  const messageId = '1571621155784233150';
+  const channelId = '1571602888923291838';
+  const content = '• **Kawasaki Ninja H2R Slammed | GodzGift**';
+  const guild = await client.guilds.fetch(guildId);
+  const channel = await guild.channels.fetch(channelId);
+  if (!channel || channel.type !== ChannelType.GuildText ||
+      channel.guildId !== guildId || !/motocykle/i.test(channel.name)) {
+    console.warn('Kawasaki rename skipped: specified channel is not the motorcycles text channel.');
+    return;
+  }
+  let message;
+  try {
+    message = await channel.messages.fetch(messageId);
+  } catch (error) {
+    console.warn('Kawasaki rename skipped: message not found in motorcycles channel: ' + error.message);
+    return;
+  }
+  if (message.author.id !== client.user.id) {
+    console.warn('Kawasaki rename skipped: message belongs to a different author.');
+    return;
+  }
+  if (message.content === content) {
+    console.log('Kawasaki rename already correct: ' + messageId);
+    return;
+  }
+  await message.edit({content, allowedMentions: {parse: []}});
+  console.log('Kawasaki rename completed: ' + messageId + ' in channel ' + channelId + ' -> ' + content);
+}
+
 client.once(Events.ClientReady, async () => {
   console.log('Discord bot connected: ' + client.user.id);
 
@@ -539,6 +570,12 @@ client.once(Events.ClientReady, async () => {
     await correctRangeRoverOnyxListing();
   } catch (error) {
     console.error('Range Rover rename failed:', error);
+  }
+
+  try {
+    await renameKawasakiListing();
+  } catch (error) {
+    console.error('Kawasaki rename failed:', error);
   }
 });
 
