@@ -5,7 +5,7 @@ const path = require('node:path');
 const AdmZip = require('adm-zip');
 const { AttachmentBuilder, ChannelType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
 
-const VALID_CATEGORIES = new Set(['pojazdy-sportowe', 'coupe', 'sedany', 'off-road', 'musclecar', 'limuzyny']);
+const VALID_CATEGORIES = new Set(['pojazdy-sportowe', 'coupe', 'sedany', 'off-road', 'musclecar', 'limuzyny', 'motocykle']);
 const FILE_MAX_BYTES = 20 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_UNCOMPRESSED = 80 * 1024 * 1024;
