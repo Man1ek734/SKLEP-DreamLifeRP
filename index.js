@@ -521,42 +521,6 @@ async function renameKawasakiListing() {
   console.log('Kawasaki rename completed: ' + messageId + ' in channel ' + channelId + ' -> ' + content);
 }
 
-
-async function renameDodgeChargerListing() {
-  const messageId = '1571607240253771926';
-  const content = '• **2022 Dodge Charger Magnum SRT Demon V2 Working Sunroof | Nukem Custom**';
-  const guild = await client.guilds.fetch(guildId);
-  const channels = await guild.channels.fetch();
-  const candidates = [...channels.values()].filter(channel =>
-    channel && channel.type === ChannelType.GuildText &&
-    channel.guildId === guildId &&
-    /musclecar|sedany|pojazdy-sportowe|coupe|off-road|limuzyny|motocykle/i.test(channel.name)
-  );
-  for (const channel of candidates) {
-    let message;
-    try {
-      message = await channel.messages.fetch(messageId);
-    } catch (error) {
-      if (error.code !== 10008 && error.code !== 50001 && error.code !== 50013) {
-        console.warn('Dodge Charger rename lookup failed in ' + channel.id + ': ' + error.message);
-      }
-      continue;
-    }
-    if (message.author.id !== client.user.id) {
-      console.warn('Dodge Charger rename refused: message is not bot-owned');
-      return;
-    }
-    if (message.content === content) {
-      console.log('Dodge Charger rename already correct: ' + messageId + ' in channel ' + channel.id);
-      return;
-    }
-    await message.edit({content, allowedMentions: {parse: []}});
-    console.log('Dodge Charger rename completed: ' + messageId + ' in channel ' + channel.id + ' -> ' + content);
-    return;
-  }
-  console.warn('Dodge Charger rename: message not found ' + messageId);
-}
-
 client.once(Events.ClientReady, async () => {
   console.log('Discord bot connected: ' + client.user.id);
 
@@ -612,12 +576,6 @@ client.once(Events.ClientReady, async () => {
     await renameKawasakiListing();
   } catch (error) {
     console.error('Kawasaki rename failed:', error);
-  }
-
-  try {
-    await renameDodgeChargerListing();
-  } catch (error) {
-    console.error('Dodge Charger rename failed:', error);
   }
 });
 
